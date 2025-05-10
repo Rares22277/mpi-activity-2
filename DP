@@ -1,0 +1,68 @@
+from copy import deepcopy
+
+def find_pure_literal(clauses):
+    all_literals = set(lit for clause in clauses for lit in clause)
+    for literal in all_literals:
+        if -literal not in all_literals:
+            return literal
+    return None
+
+def eliminate_unit_clauses(clauses, current):
+    units = [c[0] for c in clauses if len(c) == 1]
+    while units:
+        lit = units.pop()
+        current[abs(lit)] = lit > 0
+        clauses = reduce_clauses(clauses, lit)
+        if any(clause == [] for clause in clauses):
+            return None, None
+        units = [c[0] for c in clauses if len(c) == 1]
+    return clauses, current
+
+def reduce_clauses(clauses, chosen_lit):
+    updated = []
+    for clause in clauses:
+        if chosen_lit in clause:
+            continue
+        if -chosen_lit in clause:
+            new_clause = [x for x in clause if x != -chosen_lit]
+            updated.append(new_clause)
+        else:
+            updated.append(clause)
+    return updated
+
+def dp_solver(clauses, assigned):
+    clauses, assigned = eliminate_unit_clauses(clauses, assigned)
+    if clauses is None:
+        return None
+    if not clauses:
+        return assigned
+
+    remaining = [abs(lit) for clause in clauses for lit in clause if abs(lit) not in assigned]
+    if not remaining:
+        return assigned
+
+    chosen = remaining[0]
+
+    # Try setting it to True
+    assigned_true = assigned.copy()
+    assigned_true[chosen] = True
+    result = dp_solver(reduce_clauses(clauses, chosen), assigned_true)
+    if result is not None:
+        return result
+
+    # Try setting it to False
+    assigned_false = assigned.copy()
+    assigned_false[chosen] = False
+    return dp_solver(reduce_clauses(clauses, -chosen), assigned_false)
+
+# Example test
+if __name__ == "__main__":
+    formula = [[1, -2, 3], [-1, 2], [3]]
+    result = dp_solver(formula, {})
+
+    if result:
+        print("SATISFIABLE")
+        for var in sorted(result):
+            print(f"x{var} = {result[var]}")
+    else:
+        print("UNSATISFIABLE")

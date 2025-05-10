@@ -1,0 +1,47 @@
+def pl_resolution(kb):
+    # Convert each clause to a set for easier manipulation
+    clauses = [set(clause) for clause in kb]
+    new_clauses = set()
+
+    while True:
+        # Generate pairs of clauses for resolution
+        pairs = [(clauses[i], clauses[j]) for i in range(len(clauses)) for j in range(i + 1, len(clauses))]
+
+        for ci, cj in pairs:
+            # Resolve the pair of clauses
+            resolvents = resolve(ci, cj)
+            
+            # If we find an empty resolvent (contradiction), the KB is unsatisfiable
+            if frozenset() in resolvents:
+                return True  # UNSATISFIABLE
+
+            # Add new resolvents to the set of new clauses
+            new_clauses.update(resolvents)
+
+        # If no new resolvents were found, the KB is satisfiable
+        if all(frozenset(c) in map(frozenset, clauses) for c in new_clauses):
+            return False  # SATISFIABLE
+
+        # Add the new clauses to the original set of clauses
+        for c in new_clauses:
+            if set(c) not in clauses:
+                clauses.append(set(c))
+
+def resolve(ci, cj):
+    resolvents = set()
+    for literal in ci:
+        if -literal in cj:
+            # Perform resolution (remove the literal and add the rest)
+            resolvent = (ci - {literal}) | (cj - {-literal})
+            resolvents.add(frozenset(resolvent))
+    return resolvents
+
+if __name__ == "__main__":
+    # Example CNF: [[1, -2, 3], [-1, 2], [3]]
+    cnf = [[1, -2, 3], [-1, 2], [3]]
+    result = pl_resolution(cnf)
+
+    if result:
+        print("UNSATISFIABLE")
+    else:
+        print("SATISFIABLE")

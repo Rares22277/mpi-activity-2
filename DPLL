@@ -1,0 +1,63 @@
+import itertools
+
+class DPLLSolver:
+    def __init__(self, clauses):
+        self.original_clauses = [list(c) for c in set(tuple(sorted(clause)) for clause in clauses)]
+        self.literals = sorted(set(abs(lit) for clause in self.original_clauses for lit in clause))
+
+    def solve(self):
+        return self._dpll(self.original_clauses, self.literals.copy())
+
+    def _dpll(self, clauses, vars_left):
+        clauses, vars_left = self._apply_unit_propagation(clauses, vars_left)
+
+        if any(len(c) == 0 for c in clauses):
+            return False
+        if not clauses:
+            return True
+
+        selected = self._pick_variable(clauses)
+        if selected not in vars_left:
+            return self._dpll(clauses, vars_left)
+
+        vars_left = [v for v in vars_left if v != abs(selected)]
+
+        if self._dpll(self._simplify(clauses, selected), vars_left.copy()):
+            return True
+        return self._dpll(self._simplify(clauses, -selected), vars_left.copy())
+
+    def _apply_unit_propagation(self, clauses, literals):
+        unit_literals = [c[0] for c in clauses if len(c) == 1]
+        while unit_literals:
+            unit = unit_literals.pop()
+            clauses = self._simplify(clauses, unit)
+            literals = [l for l in literals if l != abs(unit)]
+            if any(len(c) == 0 for c in clauses):
+                break
+            unit_literals = [c[0] for c in clauses if len(c) == 1]
+        return clauses, literals
+
+    def _simplify(self, clauses, literal):
+        simplified = []
+        for clause in clauses:
+            if literal in clause:
+                continue
+            if -literal in clause:
+                simplified.append([x for x in clause if x != -literal])
+            else:
+                simplified.append(clause)
+        return simplified
+
+    def _pick_variable(self, clauses):
+        flat = list(itertools.chain(*clauses))
+        return max(set(flat), key=flat.count)
+
+# Sample usage
+if __name__ == "__main__":
+    cnf = [[1, -2, 3], [-1, 2], [3]]
+    solver = DPLLSolver(cnf)
+    result = solver.solve()
+    if result:
+        print("SATISFIABLE")
+    else:
+        print("UNSATISFIABLE")
